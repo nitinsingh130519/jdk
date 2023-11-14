@@ -4057,7 +4057,7 @@ bool os::win32::schedules_all_processor_groups() {
   // to detect Windows 11 or Windows Server 2022. See
   // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
 
-  if (IsWindows10OrGreater()) {
+  if (_major_version >= 10) {
     if (IsWindowsServer()) {
       // Windows Server 2022 starts at build 20348.169 as per
       // https://learn.microsoft.com/en-us/windows/release-health/release-information
