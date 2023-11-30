@@ -4072,16 +4072,7 @@ bool os::win32::schedules_all_processor_groups() {
   return false;
 }
 
-void os::win32::initialize_system_info() {
-  compute_windows_version();
-
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-  OSInfo::set_vm_page_size(si.dwPageSize);
-  OSInfo::set_vm_allocation_granularity(si.dwAllocationGranularity);
-  _processor_type  = si.dwProcessorType;
-  _processor_level = si.wProcessorLevel;
-
+DWORD os::win32::get_logical_processor_count() {
   DWORD logicalProcessors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
       LOGICAL_PROCESSOR_RELATIONSHIP, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
@@ -4092,7 +4083,7 @@ void os::win32::initialize_system_info() {
       GetModuleHandle(TEXT("kernel32")),
       "GetLogicalProcessorInformationEx");
 
-  if (glpiex != NULL && schedules_all_processor_groups()) {
+  if (glpiex != NULL) {
     LOGICAL_PROCESSOR_RELATIONSHIP relationshipType = RelationGroup;
     PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pSytemLogicalProcessorInfo = NULL;
     DWORD returnedLength = 0;
@@ -4125,6 +4116,24 @@ void os::win32::initialize_system_info() {
         warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", lastError);
       }
     }
+  }
+
+  return logicalProcessors;
+}
+
+void os::win32::initialize_system_info() {
+  compute_windows_version();
+
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+  OSInfo::set_vm_page_size(si.dwPageSize);
+  OSInfo::set_vm_allocation_granularity(si.dwAllocationGranularity);
+  _processor_type  = si.dwProcessorType;
+  _processor_level = si.wProcessorLevel;
+
+  DWORD logicalProcessors = 0;
+  if (schedules_all_processor_groups()) {
+    logicalProcessors = get_logical_processor_count();
   }
 
   set_processor_count(logicalProcessors > 0 ? logicalProcessors : si.dwNumberOfProcessors);

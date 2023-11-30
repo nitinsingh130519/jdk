@@ -62,6 +62,7 @@ class os::win32 {
   static void   setmode_streams();
   static void   compute_windows_version();
   static bool   schedules_all_processor_groups();
+  static DWORD  get_logical_processor_count();
 
   // Processor info as provided by NT
   static int processor_type()  { return _processor_type;  }
