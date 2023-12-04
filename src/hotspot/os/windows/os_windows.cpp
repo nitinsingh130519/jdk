@@ -3987,6 +3987,10 @@ int    os::win32::_minor_version             = 0;
 int    os::win32::_build_number              = 0;
 
 void os::win32::compute_windows_version() {
+  if (_major_version > 0) {
+    return; // nothing to do if already the version has already been set
+  }
+
   LPWSTR kernel32_path = NULL;
   LPWSTR version_info = NULL;
   DWORD version_size = 0;
@@ -4050,6 +4054,22 @@ free_mem:
   os::free(kernel32_path);
 }
 
+bool os::win32::is_windows_11_or_greater() {
+  compute_windows_version();
+
+  // Windows 11 starts at build 22000 (Version 21H2) as per
+  // https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information
+  return (_major_version >= 10 && _build_number >= 22000 && !IsWindowsServer());
+}
+
+bool os::win32::is_windows_server_2022_or_greater() {
+  compute_windows_version();
+
+  // Windows Server 2022 starts at build 20348.169 as per
+  // https://learn.microsoft.com/en-us/windows/release-health/release-information
+  return (_major_version >= 10 && _build_number >= 20348 && IsWindowsServer());
+}
+
 bool os::win32::schedules_all_processor_groups() {
   // Starting with Windows 11 and Windows Server 2022 the OS has changed to
   // make processes and their threads span all processors in the system,
@@ -4057,19 +4077,7 @@ bool os::win32::schedules_all_processor_groups() {
   // to detect Windows 11 or Windows Server 2022. See
   // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
 
-  if (_major_version >= 10) {
-    if (IsWindowsServer()) {
-      // Windows Server 2022 starts at build 20348.169 as per
-      // https://learn.microsoft.com/en-us/windows/release-health/release-information
-      return _build_number >= 20348;
-    } else {
-      // Windows 11 starts at build 22000 (Version 21H2) as per
-      // https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information
-      return _build_number >= 22000;
-    }
-  }
-
-  return false;
+  return is_windows_11_or_greater() || is_windows_server_2022_or_greater();
 }
 
 DWORD os::win32::get_logical_processor_count() {
