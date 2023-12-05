@@ -4070,16 +4070,6 @@ bool os::win32::is_windows_server_2022_or_greater() {
   return (_major_version >= 10 && _build_number >= 20348 && IsWindowsServer());
 }
 
-bool os::win32::schedules_all_processor_groups() {
-  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
-  // make processes and their threads span all processors in the system,
-  // across all processor groups, by default. Therefore, this function needs
-  // to detect Windows 11 or Windows Server 2022. See
-  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
-
-  return is_windows_11_or_greater() || is_windows_server_2022_or_greater();
-}
-
 DWORD os::win32::get_logical_processor_count() {
   DWORD logicalProcessors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
@@ -4139,8 +4129,15 @@ void os::win32::initialize_system_info() {
   _processor_type  = si.dwProcessorType;
   _processor_level = si.wProcessorLevel;
 
+  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
+  // make processes and their threads span all processors in the system,
+  // across all processor groups, by default. Therefore, this function needs
+  // to detect Windows 11 or Windows Server 2022. See
+  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
+  bool schedules_all_processor_groups = is_windows_11_or_greater() || is_windows_server_2022_or_greater();
+
   DWORD logicalProcessors = 0;
-  if (schedules_all_processor_groups()) {
+  if (schedules_all_processor_groups) {
     logicalProcessors = get_logical_processor_count();
   }
 
