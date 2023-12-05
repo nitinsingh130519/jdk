@@ -867,21 +867,7 @@ int os::active_processor_count() {
     return ActiveProcessorCount;
   }
 
-  DWORD_PTR lpProcessAffinityMask = 0;
-  DWORD_PTR lpSystemAffinityMask = 0;
-  int proc_count = processor_count();
-  if (proc_count <= sizeof(UINT_PTR) * BitsPerByte &&
-      GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
-    // Nof active processors is number of bits in process affinity mask
-    int bitcount = 0;
-    while (lpProcessAffinityMask != 0) {
-      lpProcessAffinityMask = lpProcessAffinityMask & (lpProcessAffinityMask-1);
-      bitcount++;
-    }
-    return bitcount;
-  } else {
-    return proc_count;
-  }
+  return processor_count();
 }
 
 uint os::processor_id() {
@@ -4070,6 +4056,83 @@ bool os::win32::is_windows_server_2022_or_greater() {
   return (_major_version >= 10 && _build_number >= 20348 && IsWindowsServer());
 }
 
+int os::win32::count_set_bits(ULONG64 argument) {
+  int bitcount = 0;
+  while (argument != 0) {
+    argument &= (argument-1);
+    bitcount++;
+  }
+  return bitcount;
+}
+
+DWORD os::win32::get_available_logical_processors() {
+  DWORD logical_processors = 0;
+
+  // Get the number of available logical processors from the associated job object
+  LPVOID lpJobObjectInformation = NULL;
+  DWORD cbJobObjectInformationLength = 0;
+
+  bool is_in_windows_job = false; // TODO: test other jobs with other JobObjectInformationClass values
+  if (!QueryInformationJobObject(NULL, JobObjectGroupInformationEx, NULL, 0, &cbJobObjectInformationLength)) {
+    DWORD last_error = GetLastError();
+    if (last_error == ERROR_INSUFFICIENT_BUFFER) {
+      DWORD group_count = cbJobObjectInformationLength / sizeof(GROUP_AFFINITY);
+
+      lpJobObjectInformation = os::malloc(cbJobObjectInformationLength, mtInternal);
+      if (lpJobObjectInformation != NULL) {
+          if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, lpJobObjectInformation, cbJobObjectInformationLength, &cbJobObjectInformationLength)) {
+            is_in_windows_job = true;
+            group_count = cbJobObjectInformationLength / sizeof(GROUP_AFFINITY);
+
+            for (DWORD i = 0; i < group_count; i++) {
+              KAFFINITY group_affinity = ((GROUP_AFFINITY*)lpJobObjectInformation)[i].Mask;
+              logical_processors += count_set_bits(group_affinity);
+            }
+          } else {
+            warning("QueryInformationJobObject() failed: GetLastError->%ld.", GetLastError());
+          }
+
+          os::free(lpJobObjectInformation);
+      } else {
+          warning("os::malloc() failed to allocate %ld bytes for QueryInformationJobObject", lpJobObjectInformation);
+      }
+    }
+  }
+
+  if (is_in_windows_job) {
+    assert(logical_processors > 0, "Must find at least 1 logical processor");
+    return logical_processors;
+  }
+
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+
+  // If there is no associated job object, get the number of available logical processors from the process affinity
+  DWORD_PTR lpProcessAffinityMask = 0;
+  DWORD_PTR lpSystemAffinityMask = 0;
+  if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
+    logical_processors = count_set_bits(lpProcessAffinityMask);
+
+    if (logical_processors != si.dwNumberOfProcessors) {
+      // Respect the custom processor affinity since it is not equal to all processors in the current (main) processor group
+      return logical_processors;
+    }
+  } else {
+    warning("GetProcessAffinityMask() failed: GetLastError->%ld.", GetLastError());
+  }
+
+  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
+  // make processes and their threads span all processors in the system,
+  // across all processor groups, by default. Therefore, this function needs
+  // to detect Windows 11 or Windows Server 2022. See
+  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
+  if (is_windows_11_or_greater() || is_windows_server_2022_or_greater()) {
+    logical_processors = get_logical_processor_count();
+  }
+
+  return logical_processors == 0 ? si.dwNumberOfProcessors : logical_processors;
+}
+
 DWORD os::win32::get_logical_processor_count() {
   DWORD logicalProcessors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
@@ -4129,18 +4192,7 @@ void os::win32::initialize_system_info() {
   _processor_type  = si.dwProcessorType;
   _processor_level = si.wProcessorLevel;
 
-  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
-  // make processes and their threads span all processors in the system,
-  // across all processor groups, by default. Therefore, this function needs
-  // to detect Windows 11 or Windows Server 2022. See
-  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
-  bool schedules_all_processor_groups = is_windows_11_or_greater() || is_windows_server_2022_or_greater();
-
-  DWORD logicalProcessors = 0;
-  if (schedules_all_processor_groups) {
-    logicalProcessors = get_logical_processor_count();
-  }
-
+  DWORD logicalProcessors = get_available_logical_processors();
   set_processor_count(logicalProcessors > 0 ? logicalProcessors : si.dwNumberOfProcessors);
 
   MEMORYSTATUSEX ms;
