@@ -47,6 +47,7 @@ class os::win32 {
   static int    _major_version;
   static int    _minor_version;
   static int    _build_number;
+  static int    _build_minor;
 
   static void print_windows_version(outputStream* st);
   static void print_uptime_info(outputStream* st);
@@ -66,6 +67,22 @@ class os::win32 {
   static int    count_set_bits(ULONG64 argument);
   static DWORD  get_available_logical_processors();
   static DWORD  get_logical_processor_count();
+  static int windows_major_version() {
+    compute_windows_version();
+    return _major_version;
+  }
+  static int windows_minor_version() {
+    compute_windows_version();
+    return _minor_version;
+  }
+  static int windows_build_number() {
+    compute_windows_version();
+    return _build_number;
+  }
+  static int windows_build_minor() {
+    compute_windows_version();
+    return _build_minor;
+  }
 
   // Processor info as provided by NT
   static int processor_type()  { return _processor_type;  }

@@ -1756,52 +1756,13 @@ void os::print_os_info(outputStream* st) {
 }
 
 void os::win32::print_windows_version(outputStream* st) {
-  VS_FIXEDFILEINFO *file_info;
-  TCHAR kernel32_path[MAX_PATH];
-  UINT len, ret;
-
   bool is_workstation = !IsWindowsServer();
 
-  // Get the full path to \Windows\System32\kernel32.dll and use that for
-  // determining what version of Windows we're running on.
-  len = MAX_PATH - (UINT)strlen("\\kernel32.dll") - 1;
-  ret = GetSystemDirectory(kernel32_path, len);
-  if (ret == 0 || ret > len) {
-    st->print_cr("Call to GetSystemDirectory failed");
-    return;
-  }
-  strncat(kernel32_path, "\\kernel32.dll", MAX_PATH - ret);
-
-  DWORD version_size = GetFileVersionInfoSize(kernel32_path, nullptr);
-  if (version_size == 0) {
-    st->print_cr("Call to GetFileVersionInfoSize failed");
-    return;
-  }
-
-  LPTSTR version_info = (LPTSTR)os::malloc(version_size, mtInternal);
-  if (version_info == nullptr) {
-    st->print_cr("Failed to allocate version_info");
-    return;
-  }
-
-  if (!GetFileVersionInfo(kernel32_path, 0, version_size, version_info)) {
-    os::free(version_info);
-    st->print_cr("Call to GetFileVersionInfo failed");
-    return;
-  }
-
-  if (!VerQueryValue(version_info, TEXT("\\"), (LPVOID*)&file_info, &len)) {
-    os::free(version_info);
-    st->print_cr("Call to VerQueryValue failed");
-    return;
-  }
-
-  int major_version = HIWORD(file_info->dwProductVersionMS);
-  int minor_version = LOWORD(file_info->dwProductVersionMS);
-  int build_number = HIWORD(file_info->dwProductVersionLS);
-  int build_minor = LOWORD(file_info->dwProductVersionLS);
+  int major_version = windows_major_version();
+  int minor_version = windows_minor_version();
+  int build_number = windows_build_number();
+  int build_minor = windows_build_minor();
   int os_vers = major_version * 1000 + minor_version;
-  os::free(version_info);
 
   st->print(" Windows ");
   switch (os_vers) {
@@ -3971,6 +3932,7 @@ bool   os::win32::_has_exit_bug              = true;
 int    os::win32::_major_version             = 0;
 int    os::win32::_minor_version             = 0;
 int    os::win32::_build_number              = 0;
+int    os::win32::_build_minor               = 0;
 
 void os::win32::compute_windows_version() {
   if (_major_version > 0) {
@@ -4034,6 +3996,7 @@ void os::win32::compute_windows_version() {
   _major_version = HIWORD(file_info->dwProductVersionMS);
   _minor_version = LOWORD(file_info->dwProductVersionMS);
   _build_number  = HIWORD(file_info->dwProductVersionLS);
+  _build_minor   = LOWORD(file_info->dwProductVersionLS);
 
 free_mem:
   os::free(version_info);
