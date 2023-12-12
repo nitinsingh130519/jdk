@@ -4075,21 +4075,21 @@ int os::win32::bit_count(ULONG64 argument) {
 DWORD os::win32::active_processors_in_job_object() {
   DWORD processors = 0;
 
-  LPVOID lpJobObjectInformation = NULL;
-  DWORD cbJobObjectInformationLength = 0;
+  LPVOID job_object_information = NULL;
+  DWORD job_object_information_length = 0;
 
-  if (!QueryInformationJobObject(NULL, JobObjectGroupInformationEx, NULL, 0, &cbJobObjectInformationLength)) {
+  if (!QueryInformationJobObject(NULL, JobObjectGroupInformationEx, NULL, 0, &job_object_information_length)) {
     DWORD last_error = GetLastError();
     if (last_error == ERROR_INSUFFICIENT_BUFFER) {
-      DWORD group_count = cbJobObjectInformationLength / sizeof(GROUP_AFFINITY);
+      DWORD group_count = job_object_information_length / sizeof(GROUP_AFFINITY);
 
-      lpJobObjectInformation = os::malloc(cbJobObjectInformationLength, mtInternal);
-      if (lpJobObjectInformation != NULL) {
-          if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, lpJobObjectInformation, cbJobObjectInformationLength, &cbJobObjectInformationLength)) {
-            group_count = cbJobObjectInformationLength / sizeof(GROUP_AFFINITY);
+      job_object_information = os::malloc(job_object_information_length, mtInternal);
+      if (job_object_information != NULL) {
+          if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, job_object_information, job_object_information_length, &job_object_information_length)) {
+            group_count = job_object_information_length / sizeof(GROUP_AFFINITY);
 
             for (DWORD i = 0; i < group_count; i++) {
-              KAFFINITY group_affinity = ((GROUP_AFFINITY*)lpJobObjectInformation)[i].Mask;
+              KAFFINITY group_affinity = ((GROUP_AFFINITY*)job_object_information)[i].Mask;
               processors += bit_count(group_affinity);
             }
 
@@ -4098,9 +4098,9 @@ DWORD os::win32::active_processors_in_job_object() {
             warning("QueryInformationJobObject() failed: GetLastError->%ld.", GetLastError());
           }
 
-          os::free(lpJobObjectInformation);
+          os::free(job_object_information);
       } else {
-          warning("os::malloc() failed to allocate %ld bytes for QueryInformationJobObject", lpJobObjectInformation);
+          warning("os::malloc() failed to allocate %ld bytes for QueryInformationJobObject", job_object_information);
       }
     }
   }
@@ -4120,33 +4120,33 @@ DWORD os::win32::system_logical_processor_count() {
       "GetLogicalProcessorInformationEx");
 
   if (glpiex != NULL) {
-    LOGICAL_PROCESSOR_RELATIONSHIP relationshipType = RelationGroup;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX pSytemLogicalProcessorInfo = NULL;
-    DWORD returnedLength = 0;
+    LOGICAL_PROCESSOR_RELATIONSHIP relationship_type = RelationGroup;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX sytem_logical_processor_info = NULL;
+    DWORD returned_length = 0;
 
     // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex
-    if (!glpiex(relationshipType, pSytemLogicalProcessorInfo, &returnedLength)) {
+    if (!glpiex(relationship_type, sytem_logical_processor_info, &returned_length)) {
       DWORD last_error = GetLastError();
 
       if (last_error == ERROR_INSUFFICIENT_BUFFER) {
-        pSytemLogicalProcessorInfo = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returnedLength, mtInternal);
+        sytem_logical_processor_info = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returned_length, mtInternal);
 
-        if (NULL == pSytemLogicalProcessorInfo) {
-          warning("os::malloc() failed to allocate %ld bytes for GetLogicalProcessorInformationEx buffer", returnedLength);
-        } else if (!glpiex(relationshipType, pSytemLogicalProcessorInfo, &returnedLength)) {
+        if (NULL == sytem_logical_processor_info) {
+          warning("os::malloc() failed to allocate %ld bytes for GetLogicalProcessorInformationEx buffer", returned_length);
+        } else if (!glpiex(relationship_type, sytem_logical_processor_info, &returned_length)) {
           warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", GetLastError());
         } else {
-          DWORD processor_groups = pSytemLogicalProcessorInfo->Group.ActiveGroupCount;
+          DWORD processor_groups = sytem_logical_processor_info->Group.ActiveGroupCount;
 
           for (DWORD i = 0; i < processor_groups; i++) {
-            PROCESSOR_GROUP_INFO group_info = pSytemLogicalProcessorInfo->Group.GroupInfo[i];
+            PROCESSOR_GROUP_INFO group_info = sytem_logical_processor_info->Group.GroupInfo[i];
             logical_processors += group_info.ActiveProcessorCount;
           }
 
           assert(logical_processors > 0, "Must find at least 1 logical processor");
         }
 
-        os::free(pSytemLogicalProcessorInfo);
+        os::free(sytem_logical_processor_info);
       }
       else {
         warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", last_error);
