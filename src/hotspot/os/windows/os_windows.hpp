@@ -65,19 +65,19 @@ class os::win32 {
   static bool   is_windows_server_2022_or_greater();
   static DWORD  system_logical_processor_count();
   static int windows_major_version() {
-    compute_windows_version();
+    initialize_windows_version();
     return _major_version;
   }
   static int windows_minor_version() {
-    compute_windows_version();
+    initialize_windows_version();
     return _minor_version;
   }
   static int windows_build_number() {
-    compute_windows_version();
+    initialize_windows_version();
     return _build_number;
   }
   static int windows_build_minor() {
-    compute_windows_version();
+    initialize_windows_version();
     return _build_minor;
   }
 
@@ -96,8 +96,8 @@ class os::win32 {
  private:
 
   static void initialize_performance_counter();
-  static void compute_windows_version();
-  static int  count_set_bits(ULONG64 argument);
+  static void initialize_windows_version();
+  static int  bit_count(ULONG64 argument);
   static DWORD active_processors_in_job_object();
 
  public:

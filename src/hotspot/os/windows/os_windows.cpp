@@ -881,7 +881,7 @@ int os::active_processor_count() {
   DWORD_PTR lpProcessAffinityMask = 0;
   DWORD_PTR lpSystemAffinityMask = 0;
   if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
-    logical_processors = win32::count_set_bits(lpProcessAffinityMask);
+    logical_processors = win32::bit_count(lpProcessAffinityMask);
 
     if (logical_processors != si.dwNumberOfProcessors) {
       // Respect the custom processor affinity since it is not equal to all processors in the current processor group
@@ -3967,7 +3967,7 @@ int    os::win32::_minor_version             = 0;
 int    os::win32::_build_number              = 0;
 int    os::win32::_build_minor               = 0;
 
-void os::win32::compute_windows_version() {
+void os::win32::initialize_windows_version() {
   if (_major_version > 0) {
     return; // nothing to do if already the version has already been set
   }
@@ -4037,7 +4037,7 @@ free_mem:
 }
 
 bool os::win32::is_windows_11_or_greater() {
-  compute_windows_version();
+  initialize_windows_version();
 
   // Windows 11 starts at build 22000 (Version 21H2) as per
   // https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information
@@ -4045,14 +4045,14 @@ bool os::win32::is_windows_11_or_greater() {
 }
 
 bool os::win32::is_windows_server_2022_or_greater() {
-  compute_windows_version();
+  initialize_windows_version();
 
   // Windows Server 2022 starts at build 20348.169 as per
   // https://learn.microsoft.com/en-us/windows/release-health/release-information
   return (_major_version >= 10 && _build_number >= 20348 && IsWindowsServer());
 }
 
-int os::win32::count_set_bits(ULONG64 argument) {
+int os::win32::bit_count(ULONG64 argument) {
   int bitcount = 0;
   while (argument != 0) {
     argument &= (argument-1);
@@ -4079,7 +4079,7 @@ DWORD os::win32::active_processors_in_job_object() {
 
             for (DWORD i = 0; i < group_count; i++) {
               KAFFINITY group_affinity = ((GROUP_AFFINITY*)lpJobObjectInformation)[i].Mask;
-              processors += count_set_bits(group_affinity);
+              processors += bit_count(group_affinity);
             }
 
             assert(processors > 0, "Must find at least 1 logical processor");
@@ -4147,7 +4147,7 @@ DWORD os::win32::system_logical_processor_count() {
 }
 
 void os::win32::initialize_system_info() {
-  compute_windows_version();
+  initialize_windows_version();
 
   SYSTEM_INFO si;
   GetSystemInfo(&si);
