@@ -4103,7 +4103,7 @@ DWORD os::win32::active_processors_in_job_object() {
 }
 
 DWORD os::win32::system_logical_processor_count() {
-  DWORD logicalProcessors = 0;
+  DWORD logical_processors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
       LOGICAL_PROCESSOR_RELATIONSHIP, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
 
@@ -4120,9 +4120,9 @@ DWORD os::win32::system_logical_processor_count() {
 
     // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex
     if (!glpiex(relationshipType, pSytemLogicalProcessorInfo, &returnedLength)) {
-      DWORD lastError = GetLastError();
+      DWORD last_error = GetLastError();
 
-      if (lastError == ERROR_INSUFFICIENT_BUFFER) {
+      if (last_error == ERROR_INSUFFICIENT_BUFFER) {
         pSytemLogicalProcessorInfo = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returnedLength, mtInternal);
 
         if (NULL == pSytemLogicalProcessorInfo) {
@@ -4130,25 +4130,25 @@ DWORD os::win32::system_logical_processor_count() {
         } else if (!glpiex(relationshipType, pSytemLogicalProcessorInfo, &returnedLength)) {
           warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", GetLastError());
         } else {
-          DWORD processorGroups = pSytemLogicalProcessorInfo->Group.ActiveGroupCount;
+          DWORD processor_groups = pSytemLogicalProcessorInfo->Group.ActiveGroupCount;
 
-          for (DWORD i = 0; i < processorGroups; i++) {
-            PROCESSOR_GROUP_INFO groupInfo = pSytemLogicalProcessorInfo->Group.GroupInfo[i];
-            logicalProcessors += groupInfo.ActiveProcessorCount;
+          for (DWORD i = 0; i < processor_groups; i++) {
+            PROCESSOR_GROUP_INFO group_info = pSytemLogicalProcessorInfo->Group.GroupInfo[i];
+            logical_processors += group_info.ActiveProcessorCount;
           }
 
-          assert(logicalProcessors > 0, "Must find at least 1 logical processor");
+          assert(logical_processors > 0, "Must find at least 1 logical processor");
         }
 
         os::free(pSytemLogicalProcessorInfo);
       }
       else {
-        warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", lastError);
+        warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", last_error);
       }
     }
   }
 
-  return logicalProcessors;
+  return logical_processors;
 }
 
 void os::win32::initialize_system_info() {
