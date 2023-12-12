@@ -99,6 +99,7 @@ class os::win32 {
   static void initialize_performance_counter();
   static void compute_windows_version();
   static int  count_set_bits(ULONG64 argument);
+  static DWORD active_processors_in_job_object();
 
  public:
   // Generic interface:

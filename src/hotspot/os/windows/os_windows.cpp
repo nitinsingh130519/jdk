@@ -4028,14 +4028,12 @@ int os::win32::count_set_bits(ULONG64 argument) {
   return bitcount;
 }
 
-DWORD os::win32::get_available_logical_processors() {
-  DWORD logical_processors = 0;
+DWORD os::win32::active_processors_in_job_object() {
+  DWORD processors = 0;
 
-  // Get the number of available logical processors from the associated job object
   LPVOID lpJobObjectInformation = NULL;
   DWORD cbJobObjectInformationLength = 0;
 
-  bool is_in_windows_job = false; // TODO: test other jobs with other JobObjectInformationClass values
   if (!QueryInformationJobObject(NULL, JobObjectGroupInformationEx, NULL, 0, &cbJobObjectInformationLength)) {
     DWORD last_error = GetLastError();
     if (last_error == ERROR_INSUFFICIENT_BUFFER) {
@@ -4044,13 +4042,14 @@ DWORD os::win32::get_available_logical_processors() {
       lpJobObjectInformation = os::malloc(cbJobObjectInformationLength, mtInternal);
       if (lpJobObjectInformation != NULL) {
           if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, lpJobObjectInformation, cbJobObjectInformationLength, &cbJobObjectInformationLength)) {
-            is_in_windows_job = true;
             group_count = cbJobObjectInformationLength / sizeof(GROUP_AFFINITY);
 
             for (DWORD i = 0; i < group_count; i++) {
               KAFFINITY group_affinity = ((GROUP_AFFINITY*)lpJobObjectInformation)[i].Mask;
-              logical_processors += count_set_bits(group_affinity);
+              processors += count_set_bits(group_affinity);
             }
+
+            assert(processors > 0, "Must find at least 1 logical processor");
           } else {
             warning("QueryInformationJobObject() failed: GetLastError->%ld.", GetLastError());
           }
@@ -4062,11 +4061,17 @@ DWORD os::win32::get_available_logical_processors() {
     }
   }
 
-  if (is_in_windows_job) {
-    assert(logical_processors > 0, "Must find at least 1 logical processor");
-    return logical_processors;
+  return processors;
+}
+
+DWORD os::win32::get_available_logical_processors() {
+  DWORD processors_in_job_object = active_processors_in_job_object();
+
+  if (processors_in_job_object > 0) {
+    return processors_in_job_object;
   }
 
+  DWORD logical_processors = 0;
   SYSTEM_INFO si;
   GetSystemInfo(&si);
 
