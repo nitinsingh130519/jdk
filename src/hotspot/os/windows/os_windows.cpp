@@ -1891,6 +1891,12 @@ void os::pd_print_cpu_info(outputStream* st, char* buf, size_t buflen) {
   if (proc_count < 1) {
     SYSTEM_INFO si;
     GetSystemInfo(&si);
+
+    // This is the number of logical processors in the current processor group only and is therefore
+    // at most 64. The GetLogicalProcessorInformation function is used to compute the total number
+    // of processors. However, it requires memory to be allocated for the processor information buffer.
+    // Since this method is used in paths where memory allocation should not be done (i.e. after a crash),
+    // only the number of processors in the current group will be returned.
     proc_count = si.dwNumberOfProcessors;
   }
 
@@ -3977,8 +3983,7 @@ void os::win32::initialize_windows_version() {
   DWORD version_size = 0;
 
   // Get the full path to \Windows\System32\kernel32.dll and use that for
-  // determining what version of Windows we're running on. This is the same
-  // approach used in src/java.base/windows/native/libjava/java_props_md.c
+  // determining what version of Windows we're running on.
   UINT buffer_size = GetSystemDirectoryW(NULL, 0);
   if (buffer_size == 0) {
     warning("GetSystemDirectoryW() failed: GetLastError->%ld.", GetLastError());
