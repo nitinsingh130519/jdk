@@ -4064,7 +4064,7 @@ DWORD os::win32::active_processors_in_job_object() {
   return processors;
 }
 
-DWORD os::win32::get_available_logical_processors() {
+DWORD os::win32::available_logical_processors() {
   DWORD processors_in_job_object = active_processors_in_job_object();
 
   if (processors_in_job_object > 0) {
@@ -4095,13 +4095,13 @@ DWORD os::win32::get_available_logical_processors() {
   // to detect Windows 11 or Windows Server 2022. See
   // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
   if (is_windows_11_or_greater() || is_windows_server_2022_or_greater()) {
-    logical_processors = get_logical_processor_count();
+    logical_processors = system_logical_processor_count();
   }
 
   return logical_processors == 0 ? si.dwNumberOfProcessors : logical_processors;
 }
 
-DWORD os::win32::get_logical_processor_count() {
+DWORD os::win32::system_logical_processor_count() {
   DWORD logicalProcessors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
       LOGICAL_PROCESSOR_RELATIONSHIP, PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX, PDWORD);
@@ -4160,7 +4160,7 @@ void os::win32::initialize_system_info() {
   _processor_type  = si.dwProcessorType;
   _processor_level = si.wProcessorLevel;
 
-  DWORD logicalProcessors = get_available_logical_processors();
+  DWORD logicalProcessors = available_logical_processors();
   set_processor_count(logicalProcessors > 0 ? logicalProcessors : si.dwNumberOfProcessors);
 
   MEMORYSTATUSEX ms;
