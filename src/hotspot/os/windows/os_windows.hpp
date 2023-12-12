@@ -63,7 +63,6 @@ class os::win32 {
   static void   setmode_streams();
   static bool   is_windows_11_or_greater();
   static bool   is_windows_server_2022_or_greater();
-  static DWORD  available_logical_processors();
   static DWORD  system_logical_processor_count();
   static int windows_major_version() {
     compute_windows_version();

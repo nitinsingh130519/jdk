@@ -867,7 +867,40 @@ int os::active_processor_count() {
     return ActiveProcessorCount;
   }
 
-  return processor_count();
+  DWORD processors_in_job_object = win32::active_processors_in_job_object();
+
+  if (processors_in_job_object > 0) {
+    return processors_in_job_object;
+  }
+
+  DWORD logical_processors = 0;
+  SYSTEM_INFO si;
+  GetSystemInfo(&si);
+
+  // There is no associated job object so get the number of available logical processors from the process affinity mask
+  DWORD_PTR lpProcessAffinityMask = 0;
+  DWORD_PTR lpSystemAffinityMask = 0;
+  if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
+    logical_processors = win32::count_set_bits(lpProcessAffinityMask);
+
+    if (logical_processors != si.dwNumberOfProcessors) {
+      // Respect the custom processor affinity since it is not equal to all processors in the current processor group
+      return logical_processors;
+    }
+  } else {
+    warning("GetProcessAffinityMask() failed: GetLastError->%ld.", GetLastError());
+  }
+
+  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
+  // make processes and their threads span all processors in the system,
+  // across all processor groups, by default. Therefore, this function needs
+  // to detect Windows 11 or Windows Server 2022. See
+  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
+  if (win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) {
+    logical_processors = processor_count();
+  }
+
+  return logical_processors == 0 ? si.dwNumberOfProcessors : logical_processors;
 }
 
 uint os::processor_id() {
@@ -4064,43 +4097,6 @@ DWORD os::win32::active_processors_in_job_object() {
   return processors;
 }
 
-DWORD os::win32::available_logical_processors() {
-  DWORD processors_in_job_object = active_processors_in_job_object();
-
-  if (processors_in_job_object > 0) {
-    return processors_in_job_object;
-  }
-
-  DWORD logical_processors = 0;
-  SYSTEM_INFO si;
-  GetSystemInfo(&si);
-
-  // If there is no associated job object, get the number of available logical processors from the process affinity
-  DWORD_PTR lpProcessAffinityMask = 0;
-  DWORD_PTR lpSystemAffinityMask = 0;
-  if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
-    logical_processors = count_set_bits(lpProcessAffinityMask);
-
-    if (logical_processors != si.dwNumberOfProcessors) {
-      // Respect the custom processor affinity since it is not equal to all processors in the current (main) processor group
-      return logical_processors;
-    }
-  } else {
-    warning("GetProcessAffinityMask() failed: GetLastError->%ld.", GetLastError());
-  }
-
-  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
-  // make processes and their threads span all processors in the system,
-  // across all processor groups, by default. Therefore, this function needs
-  // to detect Windows 11 or Windows Server 2022. See
-  // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
-  if (is_windows_11_or_greater() || is_windows_server_2022_or_greater()) {
-    logical_processors = system_logical_processor_count();
-  }
-
-  return logical_processors == 0 ? si.dwNumberOfProcessors : logical_processors;
-}
-
 DWORD os::win32::system_logical_processor_count() {
   DWORD logicalProcessors = 0;
   typedef BOOL(WINAPI* LPFN_GET_LOGICAL_PROCESSOR_INFORMATION_EX)(
@@ -4160,8 +4156,8 @@ void os::win32::initialize_system_info() {
   _processor_type  = si.dwProcessorType;
   _processor_level = si.wProcessorLevel;
 
-  DWORD logicalProcessors = available_logical_processors();
-  set_processor_count(logicalProcessors > 0 ? logicalProcessors : si.dwNumberOfProcessors);
+  DWORD processors = system_logical_processor_count();
+  set_processor_count(processors > 0 ? processors : si.dwNumberOfProcessors);
 
   MEMORYSTATUSEX ms;
   ms.dwLength = sizeof(ms);
