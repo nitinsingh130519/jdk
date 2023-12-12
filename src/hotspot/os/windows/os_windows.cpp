@@ -893,8 +893,14 @@ int os::active_processor_count() {
 
   // Starting with Windows 11 and Windows Server 2022 the OS has changed to
   // make processes and their threads span all processors in the system,
-  // across all processor groups, by default. Therefore, this function needs
-  // to detect Windows 11 or Windows Server 2022. See
+  // across all processor groups, by default. Therefore, on these operating
+  // systems, the full processor count can be used (since there are no processor
+  // affinity restritions at this point). Note that older operating systems can
+  // correctly report processor count but will not schedule threads across
+  // processor groups unless the application explicitly uses group affinity APIs
+  // to assign threads to processor groups. On these older operating systems, we
+  // will continue to use the dwNumberOfProcessors field. For details on the
+  // latest Windows scheduling behavior, see
   // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
   if (win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) {
     logical_processors = processor_count();
