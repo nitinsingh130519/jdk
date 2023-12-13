@@ -867,10 +867,20 @@ int os::active_processor_count() {
     return ActiveProcessorCount;
   }
 
-  DWORD processors_in_job_object = win32::active_processors_in_job_object();
+  // Starting with Windows 11 and Windows Server 2022, the OS has changed to
+  // make processes and their threads span all processors in the system,
+  // across all processor groups, by default. Therefore, we will allow all
+  // processors to be active processors on these operating systems. However,
+  // job objects can be used to restrict processor affinity across the
+  // processor groups. In this case, the number of active processors must be
+  // obtained from the processor affinity in the job object.
+  bool schedules_all_processor_groups = win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater();
+  if (schedules_all_processor_groups) {
+    DWORD processors_in_job_object = win32::active_processors_in_job_object();
 
-  if (processors_in_job_object > 0) {
-    return processors_in_job_object;
+    if (processors_in_job_object > 0) {
+      return processors_in_job_object;
+    }
   }
 
   DWORD logical_processors = 0;
@@ -891,18 +901,16 @@ int os::active_processor_count() {
     warning("GetProcessAffinityMask() failed: GetLastError->%ld.", GetLastError());
   }
 
-  // Starting with Windows 11 and Windows Server 2022 the OS has changed to
-  // make processes and their threads span all processors in the system,
-  // across all processor groups, by default. Therefore, on these operating
-  // systems, the full processor count can be used (since there are no processor
-  // affinity restritions at this point). Note that older operating systems can
+  // There are no processor affinity restritions at this point so we can return
+  // the overall processor count if the OS automatically schedules threads across
+  // all processors on the system. Note that older operating systems can
   // correctly report processor count but will not schedule threads across
   // processor groups unless the application explicitly uses group affinity APIs
   // to assign threads to processor groups. On these older operating systems, we
   // will continue to use the dwNumberOfProcessors field. For details on the
   // latest Windows scheduling behavior, see
   // https://learn.microsoft.com/en-us/windows/win32/procthread/processor-groups#behavior-starting-with-windows-11-and-windows-server-2022
-  if (win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) {
+  if (schedules_all_processor_groups) {
     logical_processors = processor_count();
   }
 
