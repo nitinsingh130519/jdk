@@ -4056,19 +4056,15 @@ free_mem:
 }
 
 bool os::win32::is_windows_11_or_greater() {
-  initialize_windows_version();
-
   // Windows 11 starts at build 22000 (Version 21H2) as per
   // https://learn.microsoft.com/en-us/windows/release-health/windows11-release-information
-  return (_major_version >= 10 && _build_number >= 22000 && !IsWindowsServer());
+  return (windows_major_version() >= 10 && windows_build_number() >= 22000 && !IsWindowsServer());
 }
 
 bool os::win32::is_windows_server_2022_or_greater() {
-  initialize_windows_version();
-
   // Windows Server 2022 starts at build 20348.169 as per
   // https://learn.microsoft.com/en-us/windows/release-health/release-information
-  return (_major_version >= 10 && _build_number >= 20348 && IsWindowsServer());
+  return (windows_major_version() >= 10 && windows_build_number() >= 20348 && IsWindowsServer());
 }
 
 int os::win32::bit_count(ULONG64 argument) {
