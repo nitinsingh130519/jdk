@@ -901,7 +901,7 @@ int os::active_processor_count() {
     warning("GetProcessAffinityMask() failed: GetLastError->%ld.", GetLastError());
   }
 
-  // There are no processor affinity restritions at this point so we can return
+  // There are no processor affinity restrictions at this point so we can return
   // the overall processor count if the OS automatically schedules threads across
   // all processors on the system. Note that older operating systems can
   // correctly report processor count but will not schedule threads across
@@ -4129,32 +4129,32 @@ DWORD os::win32::system_logical_processor_count() {
 
   if (glpiex != NULL) {
     LOGICAL_PROCESSOR_RELATIONSHIP relationship_type = RelationGroup;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX sytem_logical_processor_info = NULL;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX system_logical_processor_info = NULL;
     DWORD returned_length = 0;
 
     // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex
-    if (!glpiex(relationship_type, sytem_logical_processor_info, &returned_length)) {
+    if (!glpiex(relationship_type, system_logical_processor_info, &returned_length)) {
       DWORD last_error = GetLastError();
 
       if (last_error == ERROR_INSUFFICIENT_BUFFER) {
-        sytem_logical_processor_info = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returned_length, mtInternal);
+        system_logical_processor_info = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returned_length, mtInternal);
 
-        if (NULL == sytem_logical_processor_info) {
+        if (NULL == system_logical_processor_info) {
           warning("os::malloc() failed to allocate %ld bytes for GetLogicalProcessorInformationEx buffer", returned_length);
-        } else if (!glpiex(relationship_type, sytem_logical_processor_info, &returned_length)) {
+        } else if (!glpiex(relationship_type, system_logical_processor_info, &returned_length)) {
           warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", GetLastError());
         } else {
-          DWORD processor_groups = sytem_logical_processor_info->Group.ActiveGroupCount;
+          DWORD processor_groups = system_logical_processor_info->Group.ActiveGroupCount;
 
           for (DWORD i = 0; i < processor_groups; i++) {
-            PROCESSOR_GROUP_INFO group_info = sytem_logical_processor_info->Group.GroupInfo[i];
+            PROCESSOR_GROUP_INFO group_info = system_logical_processor_info->Group.GroupInfo[i];
             logical_processors += group_info.ActiveProcessorCount;
           }
 
           assert(logical_processors > 0, "Must find at least 1 logical processor");
         }
 
-        os::free(sytem_logical_processor_info);
+        os::free(system_logical_processor_info);
       }
       else {
         warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", last_error);
