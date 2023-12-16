@@ -893,7 +893,7 @@ int os::active_processor_count() {
   if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
     logical_processors = win32::bit_count(lpProcessAffinityMask);
 
-    if (logical_processors != si.dwNumberOfProcessors) {
+    if (logical_processors < si.dwNumberOfProcessors) {
       // Respect the custom processor affinity since it is not equal to all processors in the current processor group
       return logical_processors;
     }
