@@ -97,7 +97,6 @@ class os::win32 {
 
   static void initialize_performance_counter();
   static void initialize_windows_version();
-  static int  bit_count(ULONG64 argument);
   static DWORD active_processors_in_job_object();
 
  public:

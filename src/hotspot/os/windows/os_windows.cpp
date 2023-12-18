@@ -76,6 +76,7 @@
 #include "utilities/defaultStream.hpp"
 #include "utilities/events.hpp"
 #include "utilities/macros.hpp"
+#include "utilities/population_count.hpp"
 #include "utilities/vmError.hpp"
 #include "windbghelp.hpp"
 #if INCLUDE_JFR
@@ -891,7 +892,7 @@ int os::active_processor_count() {
   DWORD_PTR lpProcessAffinityMask = 0;
   DWORD_PTR lpSystemAffinityMask = 0;
   if (GetProcessAffinityMask(GetCurrentProcess(), &lpProcessAffinityMask, &lpSystemAffinityMask)) {
-    logical_processors = win32::bit_count(lpProcessAffinityMask);
+    logical_processors = population_count(lpProcessAffinityMask);
 
     if (logical_processors < si.dwNumberOfProcessors) {
       // Respect the custom processor affinity since it is not equal to all processors in the current processor group
@@ -4050,15 +4051,6 @@ bool os::win32::is_windows_server_2022_or_greater() {
   return (windows_major_version() >= 10 && windows_build_number() >= 20348 && IsWindowsServer());
 }
 
-int os::win32::bit_count(ULONG64 argument) {
-  int bitcount = 0;
-  while (argument != 0) {
-    argument &= (argument-1);
-    bitcount++;
-  }
-  return bitcount;
-}
-
 DWORD os::win32::active_processors_in_job_object() {
   BOOL is_in_job_object = false;
   if (!IsProcessInJob(GetCurrentProcess(), NULL, &is_in_job_object)) {
@@ -4087,7 +4079,7 @@ DWORD os::win32::active_processors_in_job_object() {
 
             for (DWORD i = 0; i < group_count; i++) {
               KAFFINITY group_affinity = ((GROUP_AFFINITY*)job_object_information)[i].Mask;
-              processors += bit_count(group_affinity);
+              processors += population_count(group_affinity);
             }
 
             assert(processors > 0, "Must find at least 1 logical processor");
