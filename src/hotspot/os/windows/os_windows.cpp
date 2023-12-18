@@ -4066,6 +4066,10 @@ DWORD os::win32::active_processors_in_job_object() {
     return 0;
   }
 
+  if (!is_in_job_object) {
+    return 0;
+  }
+
   DWORD processors = 0;
 
   LPVOID job_object_information = NULL;
