@@ -4060,6 +4060,12 @@ int os::win32::bit_count(ULONG64 argument) {
 }
 
 DWORD os::win32::active_processors_in_job_object() {
+  BOOL is_in_job_object = false;
+  if (!IsProcessInJob(GetCurrentProcess(), NULL, &is_in_job_object)) {
+    warning("IsProcessInJob() failed: GetLastError->%ld.", GetLastError());
+    return 0;
+  }
+
   DWORD processors = 0;
 
   LPVOID job_object_information = NULL;
