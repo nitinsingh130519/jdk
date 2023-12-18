@@ -4118,7 +4118,7 @@ DWORD os::win32::system_logical_processor_count() {
     DWORD returned_length = 0;
 
     // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex
-    if (!glpiex(relationship_type, system_logical_processor_info, &returned_length)) {
+    if (!glpiex(relationship_type, nullptr, &returned_length)) {
       DWORD last_error = GetLastError();
 
       if (last_error == ERROR_INSUFFICIENT_BUFFER) {
