@@ -4083,7 +4083,7 @@ DWORD os::win32::active_processors_in_job_object() {
       job_object_information = os::malloc(job_object_information_length, mtInternal);
       if (job_object_information != NULL) {
           if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, job_object_information, job_object_information_length, &job_object_information_length)) {
-            group_count = job_object_information_length / sizeof(GROUP_AFFINITY);
+            assert(group_count == job_object_information_length / sizeof(GROUP_AFFINITY));
 
             for (DWORD i = 0; i < group_count; i++) {
               KAFFINITY group_affinity = ((GROUP_AFFINITY*)job_object_information)[i].Mask;
