@@ -3992,67 +3992,50 @@ void os::win32::initialize_windows_version() {
     return; // nothing to do if already the version has already been set
   }
 
-  LPWSTR kernel32_path = NULL;
-  LPWSTR version_info = NULL;
-  DWORD version_size = 0;
+  VS_FIXEDFILEINFO *file_info;
+  TCHAR kernel32_path[MAX_PATH];
+  UINT len, ret;
+
+  bool is_workstation = !IsWindowsServer();
 
   // Get the full path to \Windows\System32\kernel32.dll and use that for
   // determining what version of Windows we're running on.
-  UINT buffer_size = GetSystemDirectoryW(NULL, 0);
-  if (buffer_size == 0) {
-    warning("GetSystemDirectoryW() failed: GetLastError->%ld.", GetLastError());
+  len = MAX_PATH - (UINT)strlen("\\kernel32.dll") - 1;
+  ret = GetSystemDirectory(kernel32_path, len);
+  if (ret == 0 || ret > len) {
+    warning("GetSystemDirectory() failed: GetLastError->%ld.", GetLastError());
+    return;
+  }
+  strncat(kernel32_path, "\\kernel32.dll", MAX_PATH - ret);
+
+  DWORD version_size = GetFileVersionInfoSize(kernel32_path, nullptr);
+  if (version_size == 0) {
+    warning("GetFileVersionInfoSize() failed: GetLastError->%ld.", GetLastError());
     return;
   }
 
-  UINT filename_chars = (UINT)strlen("\\kernel32.dll");
-
-  // buffer_size includes the terminating null character
-  UINT size = (buffer_size + filename_chars) * sizeof(WCHAR);
-  kernel32_path = (LPWSTR)os::malloc(size, mtInternal);
-  if (kernel32_path == NULL) {
-      warning("os::malloc() failed to allocate %ld bytes for the kernel32.dll path", size);
-      return;
+  LPTSTR version_info = (LPTSTR)os::malloc(version_size, mtInternal);
+  if (version_info == nullptr) {
+    warning("os::malloc() failed to allocate %ld bytes for GetFileVersionInfo buffer", version_size);
+    return;
   }
 
-  UINT non_null_chars_written = GetSystemDirectoryW(kernel32_path, size);
-  if (non_null_chars_written == 0) {
-    warning("GetSystemDirectoryW() failed: GetLastError->%ld.", GetLastError());
-    goto free_mem;
+  if (!GetFileVersionInfo(kernel32_path, 0, version_size, version_info)) {
+    os::free(version_info);
+    warning("GetFileVersionInfo() failed: GetLastError->%ld.", GetLastError());
+    return;
   }
 
-  wcsncat(kernel32_path, L"\\kernel32.dll", filename_chars);
-
-  version_size = GetFileVersionInfoSizeW(kernel32_path, NULL);
-  if (version_size == 0) {
-    warning("GetFileVersionInfoSizeW() failed: GetLastError->%ld.", GetLastError());
-    goto free_mem;
-  }
-
-  version_info = (LPWSTR)os::malloc(version_size, mtInternal);
-  if (version_info == NULL) {
-    warning("os::malloc() failed to allocate %ld bytes for GetFileVersionInfoW buffer", version_size);
-    goto free_mem;
-  }
-
-  if (!GetFileVersionInfoW(kernel32_path, 0, version_size, version_info)) {
-    warning("GetFileVersionInfoW() failed: GetLastError->%ld.", GetLastError());
-    goto free_mem;
-  }
-
-  VS_FIXEDFILEINFO *file_info;
-  if (!VerQueryValueW(version_info, L"\\", (LPVOID*)&file_info, &size)) {
-    warning("VerQueryValueW() failed. Cannot determine Windows version.");
-    goto free_mem;
+  if (!VerQueryValue(version_info, TEXT("\\"), (LPVOID*)&file_info, &len)) {
+    os::free(version_info);
+    warning("VerQueryValue() failed. Cannot determine Windows version.");
+    return;
   }
 
   _major_version = HIWORD(file_info->dwProductVersionMS);
   _minor_version = LOWORD(file_info->dwProductVersionMS);
   _build_number  = HIWORD(file_info->dwProductVersionLS);
   _build_minor   = LOWORD(file_info->dwProductVersionLS);
-
-free_mem:
-  os::free(version_info);
-  os::free(kernel32_path);
 }
 
 bool os::win32::is_windows_11_or_greater() {
