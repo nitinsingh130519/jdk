@@ -4089,7 +4089,7 @@ DWORD os::win32::active_processors_in_job_object() {
 
           os::free(job_object_information);
       } else {
-          warning("os::malloc() failed to allocate %ld bytes for QueryInformationJobObject", job_object_information);
+          warning("os::malloc() failed to allocate %ld bytes for QueryInformationJobObject", job_object_information_length);
       }
     }
   }
