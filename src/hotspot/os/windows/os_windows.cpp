@@ -3990,7 +3990,7 @@ int    os::win32::_build_minor               = 0;
 
 void os::win32::initialize_windows_version() {
   if (_major_version > 0) {
-    return; // nothing to do if already the version has already been set
+    return; // nothing to do if the version has already been set
   }
 
   VS_FIXEDFILEINFO *file_info;
