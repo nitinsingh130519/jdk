@@ -4053,7 +4053,7 @@ bool os::win32::is_windows_server_2022_or_greater() {
 
 DWORD os::win32::active_processors_in_job_object() {
   BOOL is_in_job_object = false;
-  if (!IsProcessInJob(GetCurrentProcess(), NULL, &is_in_job_object)) {
+  if (!IsProcessInJob(GetCurrentProcess(), nullptr, &is_in_job_object)) {
     warning("IsProcessInJob() failed: GetLastError->%ld.", GetLastError());
     return 0;
   }
@@ -4064,17 +4064,17 @@ DWORD os::win32::active_processors_in_job_object() {
 
   DWORD processors = 0;
 
-  LPVOID job_object_information = NULL;
+  LPVOID job_object_information = nullptr;
   DWORD job_object_information_length = 0;
 
-  if (!QueryInformationJobObject(NULL, JobObjectGroupInformationEx, NULL, 0, &job_object_information_length)) {
+  if (!QueryInformationJobObject(nullptr, JobObjectGroupInformationEx, nullptr, 0, &job_object_information_length)) {
     DWORD last_error = GetLastError();
     if (last_error == ERROR_INSUFFICIENT_BUFFER) {
       DWORD group_count = job_object_information_length / sizeof(GROUP_AFFINITY);
 
       job_object_information = os::malloc(job_object_information_length, mtInternal);
-      if (job_object_information != NULL) {
-          if (QueryInformationJobObject(NULL, JobObjectGroupInformationEx, job_object_information, job_object_information_length, &job_object_information_length)) {
+      if (job_object_information != nullptr) {
+          if (QueryInformationJobObject(nullptr, JobObjectGroupInformationEx, job_object_information, job_object_information_length, &job_object_information_length)) {
             assert(group_count == job_object_information_length / sizeof(GROUP_AFFINITY), "Unexpected group count");
 
             for (DWORD i = 0; i < group_count; i++) {
@@ -4108,9 +4108,9 @@ DWORD os::win32::system_logical_processor_count() {
       GetModuleHandle(TEXT("kernel32")),
       "GetLogicalProcessorInformationEx");
 
-  if (glpiex != NULL) {
+  if (glpiex != nullptr) {
     LOGICAL_PROCESSOR_RELATIONSHIP relationship_type = RelationGroup;
-    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX system_logical_processor_info = NULL;
+    PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX system_logical_processor_info = nullptr;
     DWORD returned_length = 0;
 
     // https://learn.microsoft.com/en-us/windows/win32/api/sysinfoapi/nf-sysinfoapi-getlogicalprocessorinformationex
@@ -4120,7 +4120,7 @@ DWORD os::win32::system_logical_processor_count() {
       if (last_error == ERROR_INSUFFICIENT_BUFFER) {
         system_logical_processor_info = (PSYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX)os::malloc(returned_length, mtInternal);
 
-        if (NULL == system_logical_processor_info) {
+        if (nullptr == system_logical_processor_info) {
           warning("os::malloc() failed to allocate %ld bytes for GetLogicalProcessorInformationEx buffer", returned_length);
         } else if (!glpiex(relationship_type, system_logical_processor_info, &returned_length)) {
           warning("GetLogicalProcessorInformationEx() failed: GetLastError->%ld.", GetLastError());
