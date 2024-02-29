@@ -3288,8 +3288,7 @@ void os::large_page_init() {
  #if !defined(IA32)
       // Check if the OS version is 11 or higher
       if ((win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
-
-          // Additional logic needed for ARM architecture
+          // OS-specific logic for versions 11 or greater
           size_t min_size = GetLargePageMinimum();
 
           // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
