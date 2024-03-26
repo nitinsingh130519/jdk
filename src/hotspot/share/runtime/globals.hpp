@@ -248,8 +248,7 @@ const int ObjectAlignmentInBytes = 8;
           range(0, max_uintx)                                               \
                                                                             \
  product(bool, EnableAllLargePageSizes, false, EXPERIMENTAL,                \
-          "Allow usage of all large page sizes (for Windows "               \ 
-          "Client 11+ and Server 22+ only)")                                \
+          "Client 11+ and Server 22+ only")                                 \
                                                                             \
   product(size_t, LargePageHeapSizeThreshold, 128*M,                        \
           "Use large pages if maximum heap is at least this big")           \
