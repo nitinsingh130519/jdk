@@ -3230,86 +3230,84 @@ static char* allocate_pages_individually(size_t bytes, char* addr, DWORD flags,
   return p_buf;
 }
 
-static size_t large_page_init_decide_size() {
-  // print a warning if any large page related flag is specified on command line
-  bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
-                         !FLAG_IS_DEFAULT(LargePageSizeInBytes);
+size_t os::large_page_init_decide_size() {
+    // print a warning if any large page related flag is specified on command line
+    bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
+        !FLAG_IS_DEFAULT(LargePageSizeInBytes);
 
 #define WARN(msg) if (warn_on_failure) { warning(msg); }
 #define WARN1(msg,p) if (warn_on_failure) { warning(msg,p); }
 
-  if (!request_lock_memory_privilege()) {
-    WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
-    return 0;
-  }
+    if (!request_lock_memory_privilege()) {
+        WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
+        return 0;
+    }
 
-  size_t size = GetLargePageMinimum();
-  if (size == 0) {
-    WARN("Large page is not supported by the processor.");
-    return 0;
-  }
+    size_t size = GetLargePageMinimum();
+    if (size == 0) {
+        WARN("Large page is not supported by the processor.");
+        return 0;
+    }
 
-  // Check if OS version is 11 or greater
-  if (win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) {
-      // OS-specific logic for versions 11 or greater
-      // You can implement specific checks or logic here for newer OS versions
-}
-  else {
-      // Existing logic for OS versions less than 11
+    if (os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) {
+
+    }
+    else {
 #if defined(IA32)
-      if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
-          WARN("JVM cannot use large pages bigger than 4mb.");
-          return 0;
-      }
+        if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+            WARN("JVM cannot use large pages bigger than 4mb.");
+            return 0;
+        }
 #elif defined(AMD64)
-      if (!EnableAllLargePageSizes) {
-          if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
-              WARN("JVM cannot use large pages bigger than 4mb.");
-              return 0;
-          }
-      }
+        if (!EnableAllLargePageSizes) {
+            if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+                WARN("JVM cannot use large pages bigger than 4mb.");
+                return 0;
+            }
+        }
+        else {
+            WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Client 11 and Server 22 due to limited support.");
+        }
 #endif
-  }
+        }
 
-  if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
-      size = LargePageSizeInBytes;
-  }
-  else {
-      WARN1("JVM cannot use large pages that are not a multiple of minimum large page size (%d), defaulting to minimum page size.", size);
-  }
+    if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
+        size = LargePageSizeInBytes;
+    }
+    else {
+        WARN1("JVM cannot use large pages either large page is not set or  that are not a multiple of minimum large page size (%d), defaulting to minimum page size.", size);
+    }
 
 #undef WARN
 #undef WARN1
 
-  return size;
-}
+    return size;
+    }
 
 void os::large_page_init() {
-  if (!UseLargePages) {
-    return;
-  }
+    if (!UseLargePages) {
+        return;
+    }
 
-  _large_page_size = large_page_init_decide_size();
-  const size_t default_page_size = os::vm_page_size();
-  if (_large_page_size > default_page_size) {
- #if !defined(IA32)
-      // Check if the OS version is 11 or higher
-      if ((win32::is_windows_11_or_greater() || win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
-          // OS-specific logic for versions 11 or greater
-          size_t min_size = GetLargePageMinimum();
+    _large_page_size = os::large_page_init_decide_size();
+    const size_t default_page_size = os::vm_page_size();
+    if (_large_page_size > default_page_size) {
+#if !defined(IA32)
+        if ((os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
+            size_t min_size = GetLargePageMinimum();
 
-          // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
-          for (size_t page_size = min_size; page_size < _large_page_size; page_size *= 2) {
-              _page_sizes.add(page_size);
-          }
-      }
+            // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
+            for (size_t page_size = min_size; page_size < _large_page_size; page_size *= 2) {
+                _page_sizes.add(page_size);
+            }
+        }
 #endif
 
-      _page_sizes.add(_large_page_size);
-  }
-  // Set UseLargePages based on whether a large page size was successfully determined
+        _page_sizes.add(_large_page_size);
+    }
+    // Set UseLargePages based on whether a large page size was successfully determined
 
-  UseLargePages = _large_page_size != 0;
+    UseLargePages = _large_page_size != 0;
 }
 
 int os::create_file_for_heap(const char* dir) {
@@ -3571,7 +3569,6 @@ static char* reserve_large_pages_aligned(size_t size, size_t alignment, bool exe
 char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_size, char* addr,
                                     bool exec) {
   assert(UseLargePages, "only for large pages");
-  assert(page_size == os::large_page_size(), "Currently only support one large page size on Windows");
   assert(is_aligned(addr, alignment), "Must be");
   assert(is_aligned(addr, page_size), "Must be");
 
@@ -3584,7 +3581,7 @@ char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_
   // the alignment is bound to the heap region size. So this reservation needs to
   // ensure that the requested alignment is met. When there is a requested address
   // this solves it self, since it must be properly aligned already.
-  if (addr == nullptr && alignment > page_size) {
+  if (addr == nullptr && alignment > GetLargePageMinimum()) {
     return reserve_large_pages_aligned(bytes, alignment, exec);
   }
 
