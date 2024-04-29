@@ -3249,10 +3249,7 @@ size_t os::large_page_init_decide_size() {
         return 0;
     }
 
-    if (os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) {
-
-    }
-    else {
+    if (!os::win32::is_windows_11_or_greater() && !os::win32::is_windows_server_2022_or_greater()) {
 #if defined(IA32)
         if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
             WARN("JVM cannot use large pages bigger than 4mb.");
@@ -3275,7 +3272,7 @@ size_t os::large_page_init_decide_size() {
         size = LargePageSizeInBytes;
     }
     else {
-        WARN1("JVM cannot use large pages either large page is not set or  that are not a multiple of minimum large page size (%d), defaulting to minimum page size.", size);
+        WARN1("The JVM cannot use large pages due to either the large page setting not being configured or the specified page size not being a multiple of the minimum large page size (%d), defaulting to minimum page size.", size);
     }
 
 #undef WARN
