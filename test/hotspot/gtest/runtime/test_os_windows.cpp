@@ -731,7 +731,7 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
     // Determine the minimum page size
     const size_t min_size = GetLargePageMinimum();
 
-    // Scenario 1: Set LargePageSizeInBytes to 4 times the minimum page size
+    //Set LargePageSizeInBytes to 4 times the minimum page size
     LargePageSizeInBytes = 4 * min_size; // Set a value for multiple page sizes
 
     // Initialize large page settings for the first scenario
@@ -741,7 +741,6 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
     if (isSupportedWindowsVersion) {
         EXPECT_TRUE(UseLargePages) << "UseLargePages should be true after initialization for LargePageSizeInBytes = 4 * min_size";
     }
-    // EXPECT_TRUE(UseLargePages) << "UseLargePages should be true after initialization for LargePageSizeInBytes = 4 * min_size";
 
      // Verify that _large_page_size is greater than the default page size
     const size_t default_page_size = os::vm_page_size();
@@ -749,7 +748,6 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
     if (isSupportedWindowsVersion) {
         EXPECT_GT(_large_page_size, default_page_size) << "Large page size should be greater than the default page size for LargePageSizeInBytes = 4 * min_size";
     }
-    // EXPECT_GT(_large_page_size, default_page_size) << "Large page size should be greater than the default page size for LargePageSizeInBytes = 4 * min_size";
 
 #if !defined(IA32)
     if (isSupportedWindowsVersion && EnableAllLargePageSizes) {
@@ -806,9 +804,7 @@ TEST_VM(os_windows, large_page_init_decide_size) {
     // Check for specific OS versions or architectures
     //schedules_all_processor_groups = false; // Reset the flag for additional checks
     if (isSupportedWindowsVersion) {
-        // Add specific checks for OS version 11 or greater
-    }
-    else {
+    }else {
 #if defined(IA32) || defined(AMD64)
         if (!EnableAllLargePageSizes && (min_size > 4 * M || LargePageSizeInBytes > 4 * M)) {
             EXPECT_EQ(decided_size, 0) << "Expected decided size to be 0 for large pages bigger than 4mb on IA32 or AMD64";
