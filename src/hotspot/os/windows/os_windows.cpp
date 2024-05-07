@@ -3233,7 +3233,7 @@ static char* allocate_pages_individually(size_t bytes, char* addr, DWORD flags,
 size_t os::large_page_init_decide_size() {
   // print a warning if any large page related flag is specified on command line
   bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
-    !FLAG_IS_DEFAULT(LargePageSizeInBytes);
+                         !FLAG_IS_DEFAULT(LargePageSizeInBytes);
 
 #define WARN(msg) if (warn_on_failure) { warning(msg); }
 #define WARN1(msg,p) if (warn_on_failure) { warning(msg,p); }
