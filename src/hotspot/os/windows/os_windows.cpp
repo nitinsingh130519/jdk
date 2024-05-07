@@ -3218,72 +3218,72 @@ static char* allocate_pages_individually(size_t bytes, char* addr, DWORD flags,
 size_t os::large_page_init_decide_size() {
   // print a warning if any large page related flag is specified on command line
   bool warn_on_failure = !FLAG_IS_DEFAULT(UseLargePages) ||
-      !FLAG_IS_DEFAULT(LargePageSizeInBytes);
+    !FLAG_IS_DEFAULT(LargePageSizeInBytes);
 
 #define WARN(msg) if (warn_on_failure) { warning(msg); }
 #define WARN1(msg,p) if (warn_on_failure) { warning(msg,p); }
 
   if (!request_lock_memory_privilege()) {
-      WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
-      return 0;
+    WARN("JVM cannot use large page memory because it does not have enough privilege to lock pages in memory.");
+    return 0;
   }
 
-size_t size = GetLargePageMinimum();
+  size_t size = GetLargePageMinimum();
   if (size == 0) {
-      WARN("Large page is not supported by the processor.");
-      return 0;
+    WARN("Large page is not supported by the processor.");
+    return 0;
   }
 
   if (!os::win32::is_windows_11_or_greater() && !os::win32::is_windows_server_2022_or_greater()) {
 #if defined(IA32)
-      if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
-          WARN("JVM cannot use large pages bigger than 4mb.");
-          return 0;
-      }
+    if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+      WARN("JVM cannot use large pages bigger than 4mb.");
+      return 0;
+    }
 #elif defined(AMD64)
-      if (!EnableAllLargePageSizes) {
-          if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
-              WARN("JVM cannot use large pages bigger than 4mb.");
-              return 0;
-          }
-      }else {
-          WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Client 11 and Server 22 due to limited support.");
+    if (!EnableAllLargePageSizes) {
+      if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
+        WARN("JVM cannot use large pages bigger than 4mb.");
+        return 0;
       }
+    } else {
+      WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Client 11 and Server 22 due to limited support.");
+    }
 #endif
-      }
+  }
 
   if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
-      size = LargePageSizeInBytes;
-  }else {
-      WARN1("The JVM cannot use large pages due to either the large page setting not being configured or the specified page size not being a multiple of the minimum large page size (%d), defaulting to minimum page size.", size);
+    size = LargePageSizeInBytes;
+  } else {
+    WARN1("The JVM cannot use large pages due to either the large page setting not being configured or the specified page size not being a multiple of the minimum large page size (%d), defaulting to minimum page size.", size);
   }
 
 #undef WARN
 #undef WARN1
 
   return size;
-  }
+}
 
 void os::large_page_init() {
   if (!UseLargePages) {
-      return;
+    return;
   }
 
   _large_page_size = os::large_page_init_decide_size();
   const size_t default_page_size = os::vm_page_size();
   if (_large_page_size > default_page_size) {
 #if !defined(IA32)
-      if ((os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
-          size_t min_size = GetLargePageMinimum();
+    if ((os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
+      size_t min_size = GetLargePageMinimum();
 
-          // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
-          for (size_t page_size = min_size; page_size < _large_page_size; page_size *= 2) {
-              _page_sizes.add(page_size);
-          }
+      // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
+      for (size_t page_size = min_size; page_size < _large_page_size; page_size *= 2) {
+        _page_sizes.add(page_size);
       }
+    }
 #endif
 
-      _page_sizes.add(_large_page_size);
+    _page_sizes.add(_large_page_size);
   }
   // Set UseLargePages based on whether a large page size was successfully determined
   UseLargePages = _large_page_size != 0;
