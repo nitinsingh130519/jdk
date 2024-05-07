@@ -41,7 +41,7 @@ product(bool, UseAllWindowsProcessorGroups, false,                        \
                                                                           \
 product(bool, EnableAllLargePageSizes, false, EXPERIMENTAL,               \
         "Enable support for multiple large page sizes on "                \
-        "Client 11 + and Server 22 + only")                               \
+        "Windows 11/Windows Server 2022 and later")                       \
                                                                           \
 product(bool, UseOSErrorReporting, false,                                 \
         "Let VM fatal error propagate to the OS (ie. WER on Windows)")
