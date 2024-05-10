@@ -735,7 +735,7 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
   // Set LargePageSizeInBytes to 4 times the minimum page size
   LargePageSizeInBytes = 4 * min_size; // Set a value for multiple page sizes
 
-  // Initialize large page settings for the first scenario
+  // Initialize large page settings
   os::large_page_init();
 
   // Verify that large pages are enabled
