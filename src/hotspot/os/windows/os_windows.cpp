@@ -82,8 +82,6 @@
 #if INCLUDE_JFR
 #include "jfr/jfrEvents.hpp"
 #include "jfr/support/jfrNativeLibraryLoadEvent.hpp"
-#include <thread>
-#include <chrono>
 #endif
 
 #ifdef _DEBUG
@@ -3270,8 +3268,6 @@ void os::large_page_init() {
   if (!UseLargePages) {
     return;
   }
-
-  std::this_thread::sleep_for(std::chrono::seconds(30));
 
   _large_page_size = os::large_page_init_decide_size();
   const size_t default_page_size = os::vm_page_size();
