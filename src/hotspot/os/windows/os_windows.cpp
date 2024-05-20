@@ -3252,10 +3252,16 @@ size_t os::large_page_init_decide_size() {
 #endif
   }
 
-  if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
-    size = LargePageSizeInBytes;
-  } else {
-    WARN1("The JVM cannot use large pages due to either the large page setting not being configured or the specified page size not being a multiple of the minimum large page size (%d), defaulting to minimum page size.", size);
+  if (LargePageSizeInBytes > 0) {
+    if (LargePageSizeInBytes % size == 0) {
+      size = LargePageSizeInBytes;
+    }
+    else {
+      WARN1("The specified large page size (%d) is not a multiple of the minimum large page size (%d), defaulting to minimum page size.", LargePageSizeInBytes, size);
+    }
+  }
+  else {
+    WARN1("The JVM cannot use large pages because the large page size setting is not configured, defaulting to minimum page size (%d).", size);
   }
 
 #undef WARN
