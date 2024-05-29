@@ -39,7 +39,7 @@
 product(bool, UseAllWindowsProcessorGroups, false,                        \
         "Use all processor groups on supported Windows versions")         \
                                                                           \
-product(bool, EnableAllLargePageSizes, false, EXPERIMENTAL,               \
+product(bool, EnableAllLargePageSizesForWindows, false, EXPERIMENTAL,     \
         "Enable support for multiple large page sizes on "                \
         "Windows 11/Windows Server 2022 and later")                       \
                                                                           \

@@ -727,7 +727,7 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
   UseLargePages = true;
   bool isSupportedWindowsVersion = os::win32::is_windows_11_or_greater() ||
     os::win32::is_windows_server_2022_or_greater();
-  EnableAllLargePageSizes = true; // This flag enables support for all large page sizes
+  EnableAllLargePageSizesForWindows = true; // This flag enables support for all large page sizes
 
   // Determine the minimum page size
   const size_t min_size = GetLargePageMinimum();
@@ -751,7 +751,7 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
   }
 
 #if !defined(IA32)
-  if (isSupportedWindowsVersion && EnableAllLargePageSizes) {
+  if (isSupportedWindowsVersion && EnableAllLargePageSizesForWindows) {
     size_t page_size_count = 0;
     size_t page_size = os::page_sizes().largest();
 
@@ -803,7 +803,7 @@ TEST_VM(os_windows, large_page_init_decide_size) {
 
 #if defined(IA32) || defined(AMD64)
   if (!isSupportedWindowsVersion) {
-    if (!EnableAllLargePageSizes && (min_size > 4 * M || LargePageSizeInBytes > 4 * M)) {
+    if (!EnableAllLargePageSizesForWindows && (min_size > 4 * M || LargePageSizeInBytes > 4 * M)) {
       EXPECT_EQ(decided_size, 0) << "Expected decided size to be 0 for large pages bigger than 4mb on IA32 or AMD64";
     }
   }

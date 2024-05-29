@@ -3241,27 +3241,24 @@ size_t os::large_page_init_decide_size() {
       return 0;
     }
 #elif defined(AMD64)
-    if (!EnableAllLargePageSizes) {
+    if (!EnableAllLargePageSizesForWindows) {
       if (size > 4 * M || LargePageSizeInBytes > 4 * M) {
         WARN("JVM cannot use large pages bigger than 4mb.");
         return 0;
       }
     } else {
-      WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
+      WARN("EnableAllLargePageSizesForWindows flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
     }
 #endif
   }
 
-  if (LargePageSizeInBytes > 0) {
-    if (LargePageSizeInBytes % size == 0) {
-      size = LargePageSizeInBytes;
-    }
-    else {
-      WARN1("The specified large page size (%d) is not a multiple of the minimum large page size (%d), defaulting to minimum page size.", LargePageSizeInBytes, size);
-    }
-  }
-  else {
-    WARN1("The JVM cannot use large pages because the large page size setting is not configured, defaulting to minimum page size (%d).", size);
+  if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
+    size = LargePageSizeInBytes;
+  } else {
+    WARN1("The specified large page size (%d) is %s, defaulting to minimum page size (%d).",
+      LargePageSizeInBytes,
+      LargePageSizeInBytes > 0 ? "not a multiple of the minimum large page size" : "not configured",
+      size);
   }
 
 #undef WARN
@@ -3279,7 +3276,7 @@ void os::large_page_init() {
   const size_t default_page_size = os::vm_page_size();
   if (_large_page_size > default_page_size) {
 #if !defined(IA32)
-    if ((os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizes) {
+    if ((os::win32::is_windows_11_or_greater() || os::win32::is_windows_server_2022_or_greater()) && EnableAllLargePageSizesForWindows) {
       size_t min_size = GetLargePageMinimum();
 
       // Populate _page_sizes with large page sizes less than or equal to _large_page_size, ensuring each page size is double the size of the previous one.
