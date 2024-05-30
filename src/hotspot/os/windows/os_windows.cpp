@@ -3247,18 +3247,25 @@ size_t os::large_page_init_decide_size() {
         return 0;
       }
     } else {
-      WARN("EnableAllLargePageSizesForWindows flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
+      WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
     }
 #endif
   }
 
-  if (LargePageSizeInBytes > 0 && LargePageSizeInBytes % size == 0) {
-    size = LargePageSizeInBytes;
-  } else {
-    WARN1("The specified large page size (%d) is %s, defaulting to minimum page size (%d).",
-      LargePageSizeInBytes,
-      LargePageSizeInBytes > 0 ? "not a multiple of the minimum large page size" : "not configured",
-      size);
+  if (LargePageSizeInBytes > 0) {
+    if (LargePageSizeInBytes % size == 0) {
+      size = LargePageSizeInBytes;
+    }
+    else {
+      char buffer[256];
+      snprintf(buffer, sizeof(buffer), "The specified large page size (%d) is not a multiple of the minimum large page size (%d), defaulting to minimum page size.", LargePageSizeInBytes, size);
+      WARN1("%s", buffer);
+    }
+  }
+  else {
+    char buffer[256];
+    snprintf(buffer, sizeof(buffer), "The JVM cannot use large pages because the large page size setting is not configured, defaulting to minimum page size (%d).", size);
+    WARN1("%s", buffer);
   }
 
 #undef WARN
