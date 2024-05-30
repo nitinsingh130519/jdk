@@ -3247,7 +3247,7 @@ size_t os::large_page_init_decide_size() {
         return 0;
       }
     } else {
-      WARN("EnableAllLargePageSizes flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
+      WARN("EnableAllLargePageSizesForWindows flag is ignored on Windows versions prior to Windows 11/Windows Server 2022 due to limited support.");
     }
 #endif
   }
