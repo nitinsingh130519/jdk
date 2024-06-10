@@ -723,11 +723,13 @@ TEST_VM(os_windows, processor_count) {
 }
 
 TEST_VM(os_windows, large_page_init_multiple_sizes) {
-  // Enable large pages and set conditions for the test
-  UseLargePages = true;
-  bool isSupportedWindowsVersion = os::win32::is_windows_11_or_greater() ||
+  // Set globals to make sure we hit the correct code path
+  AutoSaveRestore<bool> guardUseLargePages(&UseLargePages);
+  AutoSaveRestore<bool> guardEnableAllLargePageSizesForWindows(&EnableAllLargePageSizesForWindows);
+  FLAG_SET_CMDLINE(UseLargePages, true);
+  FLAG_SET_CMDLINE(EnableAllLargePageSizesForWindows, true);
+  bool is_supported_windows_version = os::win32::is_windows_11_or_greater() ||
     os::win32::is_windows_server_2022_or_greater();
-  EnableAllLargePageSizesForWindows = true; // This flag enables support for all large page sizes
 
   // Determine the minimum page size
   const size_t min_size = GetLargePageMinimum();
@@ -739,19 +741,19 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
   os::large_page_init();
 
   // Verify that large pages are enabled
-  if (isSupportedWindowsVersion) {
+  if (is_supported_windows_version) {
     EXPECT_TRUE(UseLargePages) << "UseLargePages should be true after initialization for LargePageSizeInBytes = 4 * min_size";
   }
 
-  // Verify that _large_page_size is greater than the default page size
+  // Verify that decided_large_page_size is greater than the default page size
   const size_t default_page_size = os::vm_page_size();
-  size_t _large_page_size = os::large_page_init_decide_size();
-  if (isSupportedWindowsVersion) {
-    EXPECT_GT(_large_page_size, default_page_size) << "Large page size should be greater than the default page size for LargePageSizeInBytes = 4 * min_size";
+  size_t decided_large_page_size = os::large_page_init_decide_size();
+  if (is_supported_windows_version) {
+    EXPECT_GT(decided_large_page_size, default_page_size) << "Large page size should be greater than the default page size for LargePageSizeInBytes = 4 * min_size";
   }
 
 #if !defined(IA32)
-  if (isSupportedWindowsVersion && EnableAllLargePageSizesForWindows) {
+  if (is_supported_windows_version) {
     size_t page_size_count = 0;
     size_t page_size = os::page_sizes().largest();
 
@@ -762,8 +764,7 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
 
     EXPECT_GT(page_size_count, 1u) << "There should be multiple large page sizes available.";
 
-    size_t large_page_size = _large_page_size;
-    size_t min_size = os::page_sizes().smallest();
+    size_t large_page_size = decided_large_page_size;
 
     for (size_t page_size = os::page_sizes().largest(); page_size >= min_size; page_size = os::page_sizes().next_smaller(page_size)) {
       EXPECT_TRUE(page_size % min_size == 0) << "Each page size should be a multiple of the minimum large page size.";
@@ -775,35 +776,37 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
 
 TEST_VM(os_windows, large_page_init_decide_size) {
   // Initial setup
-  UseLargePages = true;
-  bool isSupportedWindowsVersion = os::win32::is_windows_11_or_greater() ||
+  AutoSaveRestore<bool> guardUseLargePages(&UseLargePages);
+  FLAG_SET_CMDLINE(UseLargePages, true);
+  bool is_supported_windows_version = os::win32::is_windows_11_or_greater() ||
     os::win32::is_windows_server_2022_or_greater();
   LargePageSizeInBytes = 0; // Reset to default
 
   // Test for large page support
   size_t decided_size = os::large_page_init_decide_size();
   size_t min_size = GetLargePageMinimum();
-  if (isSupportedWindowsVersion && min_size == 0) {
+  if (is_supported_windows_version && min_size == 0) {
     EXPECT_EQ(decided_size, 0) << "Expected decided size to be 0 when large page is not supported by the processor";
   }
 
   // Scenario 1: Test with 2MB large page size
-  LargePageSizeInBytes = 2 * M; // Set large page size to 2MB
-  decided_size = os::large_page_init_decide_size(); // Recalculate decided size
   if (min_size == 2 * M) {
+    LargePageSizeInBytes = 2 * M; // Set large page size to 2MB
+    decided_size = os::large_page_init_decide_size(); // Recalculate decided size
     EXPECT_EQ(decided_size, 2 * M) << "Expected decided size to be 2M when large page and OS reported size are both 2M";
   }
 
   // Scenario 2: Test with 1MB large page size
-  LargePageSizeInBytes = 1 * M; // Set large page size to 1MB
-  decided_size = os::large_page_init_decide_size(); // Recalculate decided size
-  if (isSupportedWindowsVersion && min_size == 2 * M) {
+  if (is_supported_windows_version && min_size == 2 * M) {
+    LargePageSizeInBytes = 1 * M; // Set large page size to 1MB
+    decided_size = os::large_page_init_decide_size(); // Recalculate decided size
     EXPECT_EQ(decided_size, 2 * M) << "Expected decided size to be 2M when large page is 1M and OS reported size is 2M";
   }
 
 #if defined(IA32) || defined(AMD64)
-  if (!isSupportedWindowsVersion) {
-    if (!EnableAllLargePageSizesForWindows && (min_size > 4 * M || LargePageSizeInBytes > 4 * M)) {
+  if (!is_supported_windows_version) {
+    LargePageSizeInBytes = 5 * M; // Set large page size to 5MB
+    if (!EnableAllLargePageSizesForWindows) {
       EXPECT_EQ(decided_size, 0) << "Expected decided size to be 0 for large pages bigger than 4mb on IA32 or AMD64";
     }
   }
