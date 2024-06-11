@@ -735,6 +735,12 @@ TEST_VM(os_windows, large_page_init_multiple_sizes) {
   // Determine the minimum page size
   const size_t min_size = GetLargePageMinimum();
 
+  // End the test if GetLargePageMinimum returns 0
+  if (min_size == 0) {
+    GTEST_SKIP() << "Large pages are not supported on this system.";
+    return;
+  }
+
   // Set LargePageSizeInBytes to 4 times the minimum page size
   FLAG_SET_CMDLINE(LargePageSizeInBytes, 4 * min_size); // Set a value for multiple page sizes
 
@@ -823,7 +829,7 @@ TEST_VM(os_windows, large_page_init_decide_size) {
 
   // Assert that the decided size defaults to minimum page size when LargePageSizeInBytes
   // is not a multiple of the minimum size, assuming conditions are always met
-  EXPECT_EQ(decided_size, min_size) << "Expected decided size to default to minimum page size when LargePageSizeInBytes is not a multiple of minimum size";
+  EXPECT_EQ(decided_size, min_size) << "Expected decided size to default to minimum large page size when LargePageSizeInBytes is not a multiple of minimum size";
 }
 
 class ReserveMemorySpecialRunnable : public TestRunnable {
