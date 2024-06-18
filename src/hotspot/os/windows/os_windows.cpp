@@ -3553,8 +3553,7 @@ static char* reserve_large_pages_aligned(size_t size, size_t alignment, bool exe
   return nullptr;
 }
 
-char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_size, char* addr,
-                                    bool exec) {
+char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_size, char* addr, bool exec) {
   assert(UseLargePages, "only for large pages");
   assert(is_aligned(addr, alignment), "Must be");
   assert(is_aligned(addr, page_size), "Must be");
@@ -3564,11 +3563,18 @@ char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_
     return nullptr;
   }
 
+  // Ensure GetLargePageMinimum() returns a valid positive value
+  size_t large_page_min = GetLargePageMinimum();
+  if (large_page_min <= 0) {
+    // Handle the error appropriately, for example, log an error and return nullptr
+    return nullptr;
+  }
+
   // The requested alignment can be larger than the page size, for example with G1
   // the alignment is bound to the heap region size. So this reservation needs to
   // ensure that the requested alignment is met. When there is a requested address
   // this solves it self, since it must be properly aligned already.
-  if (addr == nullptr && alignment > GetLargePageMinimum()) {
+  if (addr == nullptr && alignment > large_page_min) {
     return reserve_large_pages_aligned(bytes, alignment, exec);
   }
 
