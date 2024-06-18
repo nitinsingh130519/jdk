@@ -3566,7 +3566,6 @@ char* os::pd_reserve_memory_special(size_t bytes, size_t alignment, size_t page_
   // Ensure GetLargePageMinimum() returns a valid positive value
   size_t large_page_min = GetLargePageMinimum();
   if (large_page_min <= 0) {
-    // Handle the error appropriately, for example, log an error and return nullptr
     return nullptr;
   }
 
